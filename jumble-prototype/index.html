@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Jumble — Mobile Prototype</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      /* Base palette */
+      --lime: #77ff63;
+      --mint: #00de8d;
+      --teal-light: #00b9a1;
+      --teal-mid: #00939e;
+      --teal-dark: #006c83;
+      --ink: #2f4858;
+
+      /* Derived theme */
+      --bg: #eafff7;
+      --card: #ffffff;
+      --accent: var(--mint);
+      --accent-strong: var(--lime);
+      --text: var(--ink);
+      --muted: rgba(47, 72, 88, 0.72);
+      --error: #ff4b4b;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      --shadow-soft: 0 18px 40px rgba(0, 147, 158, 0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, rgba(0, 185, 161, 0.35) 0, var(--bg) 45%, #ffffff 100%);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 720px;
+      padding: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 720x1280-style shell */
+    .game-shell {
+      width: 100%;
+      max-width: 720px;
+      aspect-ratio: 9 / 16; /* ~720x1280 */
+      max-height: 1280px;
+      background: linear-gradient(160deg, rgba(0, 222, 141, 0.18), rgba(119, 255, 99, 0.18));
+      border-radius: 32px;
+      border: 2px solid rgba(0, 185, 161, 0.35);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Screens */
+    .screen {
+      position: absolute;
+      inset: 0;
+      padding: 18px 16px 18px;
+      display: none;
+    }
+
+    .screen.visible {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* === MENU LAYOUT === */
+
+    /* сам экран меню — колонка: центр + футер */
+    #menu-screen {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* центральный блок с логотипом и кнопками — по центру по вертикали */
+    .menu-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-top: -32px; /* чуть подтягиваем вверх, чтобы смотрелось приятнее */
+    }
+
+    .menu-logo {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--teal-dark);
+      text-shadow: 0 0 12px rgba(0, 222, 141, 0.7);
+      margin-bottom: 4px;
+    }
+
+    .menu-subtitle {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .menu-tagline {
+      font-size: 12px;
+      color: var(--teal-mid);
+      margin-top: 2px;
+      margin-bottom: 4px;
+    }
+
+    .menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 20px;
+  padding: 0 32px;     /* ← отступы слева/справа, чтобы кнопка не растягивалась в край */
+  width: 100%;
+}
+
+    .menu-btn {
+  width: 100%;               /* ← теперь кнопка занимает всю ширину */
+  max-width: none;           /* ← убираем ограничение */
+  border-radius: 24px;
+  border: none;
+  padding: 18px 0;           /* ← высота кнопки */
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-transform: uppercase;
+  touch-action: manipulation;
+  transition: 0.12s ease;
+}
+
+
+    .menu-btn.primary {
+      background: linear-gradient(135deg, var(--mint), var(--lime));
+      color: var(--ink);
+      box-shadow: 0 14px 30px rgba(0, 185, 161, 0.45);
+    }
+
+    .menu-btn.primary:hover {
+      background: linear-gradient(135deg, var(--lime), var(--mint));
+    }
+
+    .menu-btn.secondary {
+      background: #ffffff;
+      border: 1px solid rgba(0, 147, 158, 0.4);
+      color: var(--teal-dark);
+      box-shadow: 0 10px 22px rgba(0, 147, 158, 0.18);
+    }
+
+    .menu-btn.secondary:hover {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .menu-btn:active {
+      transform: translateY(2px) scale(0.98);
+      box-shadow: none;
+    }
+
+    .menu-footer {
+      padding-bottom: 8px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      opacity: 0.9;
+    }
+
+    .menu-footer span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .footer-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--teal-mid);
+    }
+
+    /* === GAME SCREEN === */
+
+    .card {
+      background: var(--card);
+      border-radius: 28px;
+      border: 1px solid rgba(0, 147, 158, 0.25);
+      padding: 14px 14px 16px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      box-shadow: 0 12px 28px rgba(0, 147, 158, 0.18);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .logo {
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-size: 13px;
+      text-transform: uppercase;
+      color: var(--teal-dark);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-btn {
+      background: rgba(0, 185, 161, 0.1);
+      border: 1px solid rgba(0, 147, 158, 0.6);
+      padding: 6px 12px;
+      border-radius: 12px;
+      color: var(--teal-dark);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.15s ease;
+      touch-action: manipulation;
+    }
+
+    .header-btn:hover {
+      background: rgba(0, 185, 161, 0.22);
+    }
+
+    .header-btn:active {
+      transform: scale(0.95);
+    }
+
+    .small-btn {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Top and bottom layout: about 50/50 */
+    .top-section {
+      flex: 0 0 50%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .bottom-section {
+      flex: 1 0 50%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .level-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+
+    .level-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--teal-dark);
+    }
+
+    .level-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .progress {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .progress strong {
+      color: var(--teal-mid);
+    }
+
+    .scene {
+      position: relative;
+      border-radius: 18px;
+      overflow: hidden;
+      flex: 1 1 auto;
+      background: #ffffff;
+      border: 1px solid rgba(0, 147, 158, 0.35);
+      min-height: 0;
+    }
+
+    .scene img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain; /* show full Jumble-style image */
+      background: #ffffff;
+    }
+
+    .scene-caption {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(0, 147, 158, 0.4);
+      font-size: 11px;
+      color: var(--teal-dark);
+    }
+
+    .question {
+      margin: 6px 2px 10px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .question span {
+      color: var(--teal-mid);
+      font-weight: 600;
+    }
+
+    .slots-row {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      min-height: 52px;
+    }
+
+    .slot {
+      width: 44px;
+      height: 48px;
+      border-radius: 16px;
+      border: 2px solid rgba(0, 147, 158, 0.6);
+      background: rgba(234, 255, 247, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--teal-dark);
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+      touch-action: manipulation;
+    }
+
+    .slot.filled {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(0, 185, 161, 0.4);
+      background: #ffffff;
+    }
+
+    .slot:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    .letters {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 10px 0 6px;
+      min-height: 60px;
+    }
+
+    .letter-btn {
+      min-width: 48px;
+      height: 48px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 108, 131, 0.7);
+      background: linear-gradient(145deg, var(--teal-light), var(--mint));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 800;
+      color: #ffffff;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.08s, background 0.1s ease;
+      box-shadow: 0 10px 22px rgba(0, 108, 131, 0.35);
+      touch-action: manipulation;
+    }
+
+    .letter-btn:hover {
+      background: linear-gradient(145deg, var(--mint), var(--teal-light));
+    }
+
+    .letter-btn:active {
+      transform: translateY(2px) scale(0.97);
+      box-shadow: 0 6px 14px rgba(0, 108, 131, 0.35);
+    }
+
+    .letter-btn.disabled {
+      opacity: 0.3;
+      pointer-events: none;
+      box-shadow: none;
+      border-style: dashed;
+      background: rgba(234, 255, 247, 0.9);
+      color: var(--muted);
+    }
+
+    .hint-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .hint-pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(0, 222, 141, 0.12);
+      border: 1px dashed rgba(0, 147, 158, 0.6);
+      color: var(--teal-dark);
+    }
+
+    .status {
+      margin-top: 6px;
+      font-size: 13px;
+      min-height: 18px;
+      color: var(--muted);
+    }
+
+    .status.success {
+      color: var(--teal-mid);
+      font-weight: 600;
+    }
+
+    .status.error {
+      color: var(--error);
+      font-weight: 500;
+    }
+
+    .footer-bar {
+      margin-top: auto;
+      padding-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+      opacity: 0.9;
+    }
+
+    .footer-bar span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .shake {
+      animation: shake 0.32s ease;
+    }
+
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      50% { transform: translateX(4px); }
+      75% { transform: translateX(-3px); }
+      100% { transform: translateX(0); }
+    }
+
+    /* OVERLAYS */
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(47, 72, 88, 0.28);
+      backdrop-filter: blur(14px);
+      z-index: 20;
+      padding: 16px;
+    }
+
+    .overlay.visible {
+      display: flex;
+    }
+
+    .overlay-card {
+      background: #ffffff;
+      border-radius: 20px;
+      border: 1px solid rgba(0, 147, 158, 0.4);
+      padding: 18px 18px 14px;
+      width: min(90vw, 380px);
+      text-align: center;
+      box-shadow: 0 18px 40px rgba(0, 147, 158, 0.3);
+      color: var(--text);
+    }
+
+    .overlay-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: var(--teal-dark);
+    }
+
+    .overlay-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .overlay-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      border-radius: 999px;
+      border: none;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--mint), var(--lime));
+      color: var(--ink);
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+      box-shadow: 0 12px 26px rgba(0, 185, 161, 0.45);
+    }
+
+    .overlay-btn:hover {
+      background: linear-gradient(135deg, var(--lime), var(--mint));
+    }
+
+    .overlay-btn:active {
+      transform: translateY(2px) scale(0.98);
+      box-shadow: 0 8px 18px rgba(0, 185, 161, 0.4);
+    }
+
+    .overlay-caption {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .rules-list {
+      text-align: left;
+      font-size: 13px;
+      color: var(--muted);
+      margin: 10px 0 16px;
+      padding-left: 16px;
+    }
+
+    .rules-list li {
+      margin-bottom: 4px;
+    }
+
+    .rules-title-highlight {
+      color: var(--teal-mid);
+      font-weight: 700;
+    }
+
+    @media (max-width: 480px) {
+      .screen {
+        padding: 12px 12px 14px;
+      }
+      .card {
+        padding: 12px 10px 12px;
+      }
+      .slot {
+        width: 40px;
+        height: 44px;
+        font-size: 20px;
+      }
+      .letter-btn {
+        min-width: 44px;
+        height: 44px;
+        font-size: 22px;
+      }
+      .menu-center {
+        margin-top: -16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="game-shell">
+      <!-- MENU SCREEN -->
+      <div class="screen visible" id="menu-screen">
+        <div class="menu-center">
+          <div class="menu-logo">JUMBLE</div>
+          <div class="menu-subtitle">Mini word puzzle prototype</div>
+          <div class="menu-tagline">Bright, quick, tap-friendly fun.</div>
+
+          <div class="menu-buttons">
+            <button class="menu-btn primary" id="menu-play">
+              ▶ Play
+            </button>
+            <button class="menu-btn secondary" id="menu-rules">
+              ? Rules
+            </button>
+          </div>
+        </div>
+
+        <div class="menu-footer">
+          <span><span class="footer-dot"></span> Mobile-first • Scene 720×1280</span>
+        </div>
+      </div>
+
+      <!-- GAME SCREEN -->
+      <div class="screen" id="game-screen">
+        <div class="card" id="game-card">
+          <header>
+            <div class="logo">JUMBLE • PLAY</div>
+            <div class="header-right">
+              <button class="header-btn small-btn" id="info-btn">i</button>
+              <button class="header-btn" id="exit-btn">Exit</button>
+            </div>
+          </header>
+
+          <div class="top-section">
+            <div class="level-header">
+              <div>
+                <div class="level-title" id="level-title">Level 1 · Baker</div>
+                <div class="level-subtitle" id="level-subtitle">Build the word from letters</div>
+              </div>
+              <div class="progress" id="level-progress">1 / 2</div>
+            </div>
+
+            <div class="scene">
+              <img id="scene-image" src="baker.png" alt="Level scene">
+              <div class="scene-caption" id="scene-caption">The baker stayed calm, even with burnt buns…</div>
+            </div>
+          </div>
+
+          <div class="bottom-section">
+            <div class="question">
+              <span>Riddle:</span>
+              <span id="question-text">Why wasn't the baker upset when his bun got burnt?</span>
+            </div>
+
+            <div class="slots-row" id="slots-row"></div>
+
+            <div class="letters" id="letters-row"></div>
+
+            <div class="hint-row">
+              <div class="hint-pill">
+                Tap a letter to place it. Tap a slot to clear it.
+              </div>
+              <div>Answer checks automatically.</div>
+            </div>
+
+            <div class="status" id="status-line"></div>
+
+            <div class="footer-bar">
+              <span><span class="footer-dot"></span> Local prototype · no backend</span>
+              <span id="footer-level-label">Level 1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OVERLAY: LEVEL COMPLETE -->
+      <div class="overlay" id="overlay-success">
+        <div class="overlay-card">
+          <div class="overlay-title" id="overlay-success-title">Level complete!</div>
+          <div class="overlay-subtitle" id="overlay-success-subtitle">Nice! Let’s see how you handle the next one.</div>
+          <button class="overlay-btn" id="overlay-success-button">Next level</button>
+          <div class="overlay-caption" id="overlay-success-caption">
+            The punchline is revealed.
+          </div>
+        </div>
+      </div>
+
+      <!-- OVERLAY: RULES -->
+      <div class="overlay" id="overlay-rules">
+        <div class="overlay-card">
+          <div class="overlay-title">
+            <span class="rules-title-highlight">Rules</span> / How to play
+          </div>
+          <div class="overlay-subtitle">
+            A classic newspaper-style Jumble, adapted for mobile.
+          </div>
+          <ul class="rules-list">
+            <li>You see a cartoon scene and a riddle about it.</li>
+            <li>At the bottom, you get jumbled letters that form a word.</li>
+            <li>Tap a letter to place it in the first empty slot.</li>
+            <li>Tap a slot to send that letter back down.</li>
+            <li>Once all slots are filled, your answer is checked automatically.</li>
+            <li>If it’s wrong, the word resets and you can try again.</li>
+          </ul>
+          <button class="overlay-btn" id="overlay-rules-close">Got it, let’s play!</button>
+          <div class="overlay-caption">
+            Designed for one-handed play on a phone.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Level data
+    const levels = [
+      {
+        id: 1,
+        title: "Level 1 · Baker",
+        subtitle: "Build the word from letters",
+        progressLabel: "1 / 2",
+        footerLabel: "Level 1",
+        sceneImage: "baker.png", // bakery image
+        sceneCaption: "The baker stayed calm, even with burnt buns…",
+        question: "Why wasn't the baker upset when his bun got burnt?",
+        targetWord: "LOAF",
+        letters: ["F", "L", "A", "O"],
+        successTitle: "Level complete!",
+        successSubtitle: "Correct word: LOAF.",
+        successCaption: "Punchline: A BONUS (a 'bun' turned into a little 'bonus')."
+      },
+      {
+        id: 2,
+        title: "Level 2 · Fisherman",
+        subtitle: "Build the word from letters",
+        progressLabel: "2 / 2",
+        footerLabel: "Level 2",
+        sceneImage: "A_black_and_white_ink_drawing_in_a_classic_cartoon.png", // fisherman image
+        sceneCaption: "The catch was small, but the story was big.",
+        question: "Why was the fisherman happy about his tiny catch?",
+        targetWord: "FISH",
+        letters: ["S", "H", "F", "I"],
+        successTitle: "Nice one!",
+        successSubtitle: "Correct word: FISH.",
+        successCaption: "Punchline: A NIBBLE — he was glad to get even a small bite."
+      }
+    ];
+
+    let currentLevelIndex = 0;
+    let slots = [];
+    let lettersState = [];
+
+    const menuScreenEl = document.getElementById("menu-screen");
+    const gameScreenEl = document.getElementById("game-screen");
+
+    const menuPlayBtn = document.getElementById("menu-play");
+    const menuRulesBtn = document.getElementById("menu-rules");
+
+    const levelTitleEl = document.getElementById("level-title");
+    const levelSubtitleEl = document.getElementById("level-subtitle");
+    const progressEl = document.getElementById("level-progress");
+    const sceneImgEl = document.getElementById("scene-image");
+    const sceneCaptionEl = document.getElementById("scene-caption");
+    const questionTextEl = document.getElementById("question-text");
+    const slotsRowEl = document.getElementById("slots-row");
+    const lettersRowEl = document.getElementById("letters-row");
+    const statusLineEl = document.getElementById("status-line");
+    const cardEl = document.getElementById("game-card");
+    const footerLevelLabelEl = document.getElementById("footer-level-label");
+
+    const overlaySuccessEl = document.getElementById("overlay-success");
+    const overlaySuccessTitleEl = document.getElementById("overlay-success-title");
+    const overlaySuccessSubtitleEl = document.getElementById("overlay-success-subtitle");
+    const overlaySuccessButtonEl = document.getElementById("overlay-success-button");
+    const overlaySuccessCaptionEl = document.getElementById("overlay-success-caption");
+
+    const overlayRulesEl = document.getElementById("overlay-rules");
+    const overlayRulesCloseBtn = document.getElementById("overlay-rules-close");
+
+    const exitBtn = document.getElementById("exit-btn");
+    const infoBtn = document.getElementById("info-btn");
+
+    function shuffleArray(array) {
+      const arr = array.slice();
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function setupLevel(index) {
+      const level = levels[index];
+      currentLevelIndex = index;
+      slots = [];
+      lettersState = [];
+
+      levelTitleEl.textContent = level.title;
+      levelSubtitleEl.textContent = level.subtitle;
+      progressEl.textContent = level.progressLabel;
+      sceneImgEl.src = level.sceneImage;
+      sceneCaptionEl.textContent = level.sceneCaption;
+      questionTextEl.textContent = level.question;
+      footerLevelLabelEl.textContent = level.footerLabel;
+
+      statusLineEl.textContent = "";
+      statusLineEl.className = "status";
+
+      // Slots
+      slotsRowEl.innerHTML = "";
+      const wordLength = level.targetWord.length;
+      for (let i = 0; i < wordLength; i++) {
+        const slot = document.createElement("div");
+        slot.className = "slot";
+        slot.dataset.index = i;
+        slot.textContent = "";
+        slot.addEventListener("click", onSlotClick);
+        slotsRowEl.appendChild(slot);
+
+        slots.push({
+          letter: "",
+          element: slot
+        });
+      }
+
+      // Letters
+      lettersRowEl.innerHTML = "";
+      const shuffledLetters = shuffleArray(level.letters);
+      shuffledLetters.forEach((ch, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "letter-btn";
+        btn.textContent = ch;
+        btn.dataset.index = idx;
+        btn.addEventListener("click", onLetterClick);
+
+        lettersRowEl.appendChild(btn);
+        lettersState.push({
+          letter: ch,
+          placed: false,
+          element: btn
+        });
+      });
+    }
+
+    function onLetterClick(e) {
+      const idx = Number(e.currentTarget.dataset.index);
+      const letterObj = lettersState[idx];
+      if (letterObj.placed) return;
+
+      const emptySlot = slots.find(s => s.letter === "");
+      if (!emptySlot) return;
+
+      emptySlot.letter = letterObj.letter;
+      emptySlot.element.textContent = letterObj.letter;
+      emptySlot.element.classList.add("filled");
+
+      letterObj.placed = true;
+      letterObj.element.classList.add("disabled");
+
+      checkIfWordComplete();
+    }
+
+    function onSlotClick(e) {
+      const slotIndex = Number(e.currentTarget.dataset.index);
+      const slot = slots[slotIndex];
+
+      if (!slot.letter) return;
+
+      const letterObj = lettersState.find(l => l.letter === slot.letter && l.placed);
+      if (letterObj) {
+        letterObj.placed = false;
+        letterObj.element.classList.remove("disabled");
+      }
+
+      slot.letter = "";
+      slot.element.textContent = "";
+      slot.element.classList.remove("filled");
+
+      statusLineEl.textContent = "";
+      statusLineEl.className = "status";
+    }
+
+    function checkIfWordComplete() {
+      const allFilled = slots.every(s => s.letter !== "");
+      if (!allFilled) return;
+
+      const currentWord = slots.map(s => s.letter).join("");
+      const level = levels[currentLevelIndex];
+
+      if (currentWord === level.targetWord) {
+        statusLineEl.textContent = "Correct! 🎉";
+        statusLineEl.className = "status success";
+        showSuccessOverlay(level);
+      } else {
+        statusLineEl.textContent = "Not quite, try again.";
+        statusLineEl.className = "status error";
+        cardEl.classList.add("shake");
+
+        setTimeout(() => {
+          cardEl.classList.remove("shake");
+          resetWord();
+        }, 420);
+      }
+    }
+
+    function resetWord() {
+      slots.forEach(s => {
+        s.letter = "";
+        s.element.textContent = "";
+        s.element.classList.remove("filled");
+      });
+
+      lettersState.forEach(l => {
+        l.placed = false;
+        l.element.classList.remove("disabled");
+      });
+
+      statusLineEl.textContent = "";
+      statusLineEl.className = "status";
+    }
+
+    function showSuccessOverlay(level) {
+      overlaySuccessTitleEl.textContent = level.successTitle;
+      overlaySuccessSubtitleEl.textContent = level.successSubtitle;
+      overlaySuccessCaptionEl.textContent = level.successCaption;
+
+      if (currentLevelIndex < levels.length - 1) {
+        overlaySuccessButtonEl.textContent = "Next level";
+      } else {
+        overlaySuccessButtonEl.textContent = "Back to menu";
+      }
+
+      overlaySuccessEl.classList.add("visible");
+    }
+
+    overlaySuccessButtonEl.addEventListener("click", () => {
+      overlaySuccessEl.classList.remove("visible");
+      if (currentLevelIndex < levels.length - 1) {
+        setupLevel(currentLevelIndex + 1);
+      } else {
+        gameScreenEl.classList.remove("visible");
+        menuScreenEl.classList.add("visible");
+      }
+    });
+
+    // Menu buttons
+    menuPlayBtn.addEventListener("click", () => {
+      menuScreenEl.classList.remove("visible");
+      gameScreenEl.classList.add("visible");
+      setupLevel(0);
+    });
+
+    menuRulesBtn.addEventListener("click", () => {
+      overlayRulesEl.classList.add("visible");
+    });
+
+    overlayRulesCloseBtn.addEventListener("click", () => {
+      overlayRulesEl.classList.remove("visible");
+    });
+
+    // Exit to menu from game
+    exitBtn.addEventListener("click", () => {
+      gameScreenEl.classList.remove("visible");
+      menuScreenEl.classList.add("visible");
+    });
+
+    // Info button in game → show rules
+    infoBtn.addEventListener("click", () => {
+      overlayRulesEl.classList.add("visible");
+    });
+
+    // Start in menu; levels load on Play
+  </script>
+</body>
+</html>
